@@ -657,9 +657,9 @@ const devcmd vtable_bragi_mousepad = {
 };
 
 // Corsair Virtuoso XT SlipStream dongle. No keymap/macro/DPI/pollrate/onboard-profile
-// concept -- just 3 RGB zones (mic ring and power indicator confirmed working, logo
-// zone requires a separate persistent brightness register handled inside
-// updatergb_headset()/headset_set_brightness(), not part of this vtable).
+// concept -- just 3 RGB zones. The logo zone also requires a separate persistent
+// brightness register, handled inside updatergb_headset()/headset_set_brightness(),
+// not part of this vtable.
 const devcmd vtable_headset = {
     .hwload = cmd_io_none,
     .hwsave = cmd_io_none,

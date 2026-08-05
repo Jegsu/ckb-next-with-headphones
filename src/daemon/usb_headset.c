@@ -3,13 +3,12 @@
 #include "device.h"
 #include "usb_headset.h"
 
-// Corsair Virtuoso XT SlipStream dongle (1b1c:0a64) protocol, confirmed against real
-// hardware. Every frame: [0x02][routing][opcode bytes...][payload bytes...], zero
-// padded to MSG_SIZE (64) bytes, sent to EP 0x01 (interface 3's OUT endpoint),
-// response read from EP 0x81 (interface 3's IN endpoint). Routing byte 0x09 addresses
-// the one paired headset directly (the dongle's own GetDevices enumeration mechanism,
-// routing 0x08, reliably reported 0 paired devices in testing despite the headset being
-// genuinely connected -- so it's not used here; a single paired headset is assumed).
+// Corsair Virtuoso XT SlipStream dongle (1b1c:0a64) protocol. Every frame:
+// [0x02][routing][opcode bytes...][payload bytes...], zero padded to MSG_SIZE (64)
+// bytes, sent to EP 0x01 (interface 3's OUT endpoint), response read from EP 0x81
+// (interface 3's IN endpoint). Routing byte 0x09 addresses the one paired headset
+// directly; a single paired headset is assumed (multi-device enumeration is not
+// implemented).
 #define HEADSET_EP_OUT 0x01
 #define HEADSET_EP_IN  0x81
 #define HEADSET_ROUTING 0x09
@@ -88,6 +87,23 @@ static const uchar cmd_heartbeat[]       = { 0x12 };
 static const uchar cmd_sidetone_mode[]   = { 0x01, 0x46, 0x00 };
 static const uchar cmd_sidetone_volume[] = { 0x01, 0x47, 0x00 };
 
+// The device requires a periodic heartbeat roughly every 10s while in software mode,
+// or it reverts to hardware mode and the custom colors are lost.
+static const struct timespec headset_poll_delay = { .tv_sec = 10 };
+
+static void* headset_poll_thread(void* ctx){
+    usbdevice* kb = ctx;
+    int ret;
+    while(!(ret = clock_nanosleep(CLOCK_MONOTONIC, 0, &headset_poll_delay, NULL))){
+        queued_mutex_lock(dmutex(kb));
+        if(kb->active)
+            headset_keepalive(kb);
+        queued_mutex_unlock(dmutex(kb));
+    }
+    ckb_info("ckb%d: Headset keepalive thread shutting down due to %d (%s)", INDEX_OF(kb, keyboard), ret, strerror(ret));
+    return NULL;
+}
+
 static int setactive_headset(usbdevice* kb, int active){
     clear_input_and_rgb(kb, active);
     uchar resp[MSG_SIZE];
@@ -96,6 +112,23 @@ static int setactive_headset(usbdevice* kb, int active){
             return -1;
         // Must run once before writeColor has any visible effect.
         headset_transfer(kb, cmd_init_leds, sizeof(cmd_init_leds), NULL, 0, resp);
+
+        // Start the keepalive poll thread if it's not running already. Reuses the
+        // generic kb->pollthread field/lifecycle (see bragi_poll_thread for the same
+        // pattern) -- closeusb() already kills/joins/frees it for any device type.
+        if(!kb->pollthread){
+            kb->pollthread = malloc(sizeof(pthread_t));
+            if(kb->pollthread){
+                int err = pthread_create(kb->pollthread, 0, headset_poll_thread, kb);
+                if(err != 0){
+                    ckb_err("ckb%d: Failed to create headset keepalive thread", INDEX_OF(kb, keyboard));
+                    free(kb->pollthread);
+                    kb->pollthread = NULL;
+                }
+            } else {
+                ckb_err("ckb%d: Failed to allocate memory for headset keepalive thread", INDEX_OF(kb, keyboard));
+            }
+        }
     } else {
         if(!headset_transfer(kb, cmd_hardware_mode, sizeof(cmd_hardware_mode), NULL, 0, resp))
             return -1;
