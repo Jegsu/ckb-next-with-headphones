@@ -10,6 +10,7 @@
 #include "usb_legacy.h"
 #include "usb_nxp.h"
 #include "usb_bragi.h"
+#include "usb_headset.h"
 
 // Do-nothing functions
 static void cmd_none(usbdevice* kb, usbmode* dummy1, int dummy2, int dummy3, const char* dummy4){
@@ -653,4 +654,61 @@ const devcmd vtable_bragi_mousepad = {
     .get_battery_info = int0_void_none,
     .delay = bragi_delay,
     .setfps = int1_void_none, // Bragi devices respond to everything, so no need for delays
+};
+
+// Corsair Virtuoso XT SlipStream dongle. No keymap/macro/DPI/pollrate/onboard-profile
+// concept -- just 3 RGB zones (mic ring and power indicator confirmed working, logo
+// zone requires a separate persistent brightness register handled inside
+// updatergb_headset()/headset_set_brightness(), not part of this vtable).
+const devcmd vtable_headset = {
+    .hwload = cmd_io_none,
+    .hwsave = cmd_io_none,
+    .fwupdate = cmd_io_none,
+    .pollrate = cmd_pollrate_none,
+
+    .active = cmd_active_headset,
+    .idle = cmd_idle_headset,
+
+    .erase = cmd_erase,
+    .eraseprofile = cmd_eraseprofile,
+    .name = cmd_name,
+    .profilename = cmd_profilename,
+    .id = cmd_id,
+    .profileid = cmd_profileid,
+
+    .rgb = cmd_rgb,
+    .hwanim = cmd_none,
+    .ioff = cmd_none,
+    .ion = cmd_none,
+    .iauto = cmd_none,
+
+    .bind = cmd_none,
+    .unbind = cmd_none,
+    .rebind = cmd_none,
+    .macro = cmd_macro_none,
+
+    .dpi = cmd_macro_none,
+    .dpisel = cmd_none,
+    .lift = cmd_none,
+    .snap = cmd_none,
+
+    .notify = cmd_notify,
+    .inotify = cmd_inotify,
+    .get = cmd_get,
+
+    .start = start_dev,
+    .setmodeindex = int1_void_none,
+    .allocprofile = allocprofile,
+    .loadprofile = loadprofile,
+    .freeprofile = freeprofile,
+    .updatergb = updatergb_headset,
+    .updateindicators = int1_void_none,
+    .updatedpi = int1_int_none,
+    .reset = cmd_none,
+    .fill_input_eps = headset_fill_input_eps,
+    .write = headset_usb_write,
+    .read = headset_usb_read,
+    .get_battery_info = int0_void_none,
+    .delay = nxp_delay,
+    .setfps = int1_void_none,
 };

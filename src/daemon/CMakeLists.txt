@@ -90,6 +90,7 @@ if (MACOS OR LINUX)
               usb_nxp.c
               usb_legacy.c
               usb_bragi.c
+              usb_headset.c
               bragi_common.c
               bragi_notification.c
               utils.c
@@ -118,6 +119,7 @@ if (MACOS OR LINUX)
               usb_legacy.h
               bragi_proto.h
               usb_bragi.h
+              usb_headset.h
               bragi_common.h
               bragi_notification.h
               utils.h

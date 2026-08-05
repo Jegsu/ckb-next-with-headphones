@@ -310,13 +310,26 @@ void os_closeusb(usbdevice* kb){
 /// Function is called  in usb_linux.c only, so it is declared as static now.
 ///
 static int usbclaim(usbdevice* kb){
-    int count = kb->epcount;
+    // Most devices claim every interface (0..epcount-1). The Virtuoso XT dongle also
+    // exposes 3 USB-audio interfaces (0-2) that must stay bound to snd-usb-audio or
+    // the headset goes silent, so only its 2 HID interfaces (3 main, 4 listener) are
+    // claimed here.
+    static const int headset_interfaces[] = { 3, 4 };
+    const int* interfaces = NULL;
+    int count;
+    if(IS_VIRTUOSO_XT_DONGLE(kb)){
+        interfaces = headset_interfaces;
+        count = sizeof(headset_interfaces) / sizeof(headset_interfaces[0]);
+    } else {
+        count = kb->epcount;
+    }
 #ifndef NDEBUG
     ckb_info("ckb%d: Claiming %d interfaces", INDEX_OF(kb, keyboard), count);
 #endif // DEBUG
 
     int retries = 0;
-    for(int i = 0; i < count; i++){
+    for(int idx = 0; idx < count; idx++){
+        int i = interfaces ? interfaces[idx] : idx;
         while (1) {
             struct usbdevfs_ioctl ctl = { i, USBDEVFS_DISCONNECT, 0 };
             ioctl(kb->handle - 1, USBDEVFS_IOCTL, &ctl);

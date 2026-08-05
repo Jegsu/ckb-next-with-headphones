@@ -137,6 +137,8 @@ const device_desc models[] = {
     { V_CORSAIR, P_MM700, },
     // Headset stands
     { V_CORSAIR, P_ST100, },
+    // Headsets
+    { V_CORSAIR, P_VIRTUOSO_XT_DONGLE, },
     // Misc
     { V_CORSAIR, P_GENERIC_BRAGI_DONGLE, },
 };
@@ -281,6 +283,8 @@ const char* product_str(ushort product){
         return "darkcore";
     if(product == P_ST100)
         return "st100";
+    if(product == P_VIRTUOSO_XT_DONGLE)
+        return "virtuoso_xt_dongle";
     if(product == P_GENERIC_BRAGI_DONGLE)
         return "bragi_dongle";
     if(product == P_MM700)
@@ -321,6 +325,8 @@ static const devcmd* get_vtable(usbdevice* kb){
                 return &vtable_keyboard;
         }
         break;
+    case PROTO_HEADSET:
+        return &vtable_headset;
     default:
         ckb_fatal("ckb%d: Unknown protocol for device", INDEX_OF(kb, keyboard));
     }
@@ -369,6 +375,8 @@ void fill_usbdevice_protocol(usbdevice* kb){
         kb->protocol = PROTO_BRAGI;
     else if(IS_LEGACY_DEV(kb))
         kb->protocol = PROTO_LEGACY;
+    else if(IS_VIRTUOSO_XT_DONGLE(kb))
+        kb->protocol = PROTO_HEADSET;
     else
         kb->protocol = PROTO_NXP;
 

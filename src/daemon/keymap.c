@@ -807,7 +807,9 @@ void process_input_urb(void* context, unsigned char* buffer, int urblen, ushort 
     }
 
     // If the response starts with CMD_GET (0x0e) for NXP, or it came from a bragi command EP, that means it needs to go to os_usbrecv()
-    if(urblen == kb->out_ep_packet_size && (firstbyte == CMD_GET || (kb->protocol == PROTO_BRAGI && ep == kb->bragi_in_ep))){
+    // Headset devices have no concept of unsolicited "input" at all -- every URB on the
+    // main IN endpoint is a reply to a command we just sent, so always route it there.
+    if(urblen == kb->out_ep_packet_size && (firstbyte == CMD_GET || (kb->protocol == PROTO_BRAGI && ep == kb->bragi_in_ep) || kb->protocol == PROTO_HEADSET)){
 #ifdef DEBUG_USB_RECV
         print_urb_buffer("Recv:", buffer, urblen, NULL, 0, NULL, INDEX_OF(targetkb, keyboard), (uchar)ep);
 #endif

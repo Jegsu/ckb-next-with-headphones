@@ -215,12 +215,14 @@ extern const union devcmd vtable_bragi_mouse;
 extern const union devcmd vtable_bragi_keyboard;
 extern const union devcmd vtable_bragi_dongle;
 extern const union devcmd vtable_bragi_mousepad;
+extern const union devcmd vtable_headset;
 
 typedef enum protocol_
 {
     PROTO_NXP,
     PROTO_BRAGI,
     PROTO_LEGACY,
+    PROTO_HEADSET,
 } protocol_t;
 
 typedef enum pollrate_ {
